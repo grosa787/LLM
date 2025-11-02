@@ -18,8 +18,8 @@ struct ChatView: View {
                         .padding()
                     }
                     .background(Color(uiColor: .systemGroupedBackground))
-                    .onChange(of: viewModel.messages) { _ in
-                        if let last = viewModel.messages.last {
+                    .onChange(of: viewModel.messages) { _, newMessages in
+                        if let last = newMessages.last {
                             withAnimation {
                                 proxy.scrollTo(last.id, anchor: .bottom)
                             }
@@ -60,7 +60,7 @@ struct ChatView: View {
         .onAppear {
             viewModel.update(llamaManager: llamaManager)
         }
-        .onChange(of: llamaManager.activeLLMState) { newValue in
+        .onChange(of: llamaManager.activeLLMState) { _, newValue in
             if case .idle = newValue {
                 viewModel.clearConversation()
             }

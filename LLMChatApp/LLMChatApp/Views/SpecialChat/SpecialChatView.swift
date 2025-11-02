@@ -75,7 +75,7 @@ struct SpecialChatView: View {
         .onAppear {
             viewModel.update(llamaManager: llamaManager)
         }
-        .onChange(of: llamaManager.activeLLMState) { newValue in
+        .onChange(of: llamaManager.activeLLMState) { _, newValue in
             if case .idle = newValue {
                 viewModel.elements = [TaskElement(type: .condition)]
                 viewModel.generatedPrompt = ""

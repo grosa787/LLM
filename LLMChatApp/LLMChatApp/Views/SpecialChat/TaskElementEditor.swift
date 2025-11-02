@@ -31,8 +31,8 @@ struct TaskElementEditor: View {
             }
         }
         .padding(.vertical, 4)
-        .onChange(of: element.type) { _ in syncOptionsIfNeeded() }
-        .onChange(of: element.text) { _ in syncOptionsIfNeeded() }
+        .onChange(of: element.type) { _, _ in syncOptionsIfNeeded() }
+        .onChange(of: element.text) { _, _ in syncOptionsIfNeeded() }
         .onAppear { syncOptionsIfNeeded() }
     }
 

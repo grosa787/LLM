@@ -1,18 +1,21 @@
 import Foundation
 
+extension OpaquePointer: @unchecked Sendable {}
+
 final class LlamaBridge: LlamaBridgeProtocol {
+    private let queue = DispatchQueue(label: "com.llmchatapp.llamabridge", qos: .userInitiated)
     private var context: OpaquePointer?
 
     func loadModel(at url: URL) async throws {
         try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
+            queue.async {
                 do {
-                    try self.unloadModelIfNeeded()
+                    self.unloadModelIfNeededLocked()
                     guard let handle = llama_create_context(url.path) else {
                         throw LLMError.loadFailed("Не удалось создать контекст llama.cpp")
                     }
                     self.context = handle
-                    continuation.resume()
+                    continuation.resume(returning: ())
                 } catch {
                     continuation.resume(throwing: error)
                 }
@@ -22,11 +25,12 @@ final class LlamaBridge: LlamaBridgeProtocol {
 
     func generateResponse(prompt: String, settings: GenerationSettings) async throws -> String {
         guard let context else { throw LLMError.modelNotReady }
+        let contextHandle = context
 
         return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
+            queue.async {
                 do {
-                    let response = try llama_generate(context, prompt, settings.temperature, Int32(settings.maxTokens))
+                    let response = try llama_generate(contextHandle, prompt, settings.temperature, Int32(settings.maxTokens))
                     continuation.resume(returning: response)
                 } catch {
                     continuation.resume(throwing: error)
@@ -39,7 +43,7 @@ final class LlamaBridge: LlamaBridgeProtocol {
         llama_cancel()
     }
 
-    private func unloadModelIfNeeded() throws {
+    private func unloadModelIfNeededLocked() {
         if let context {
             llama_destroy_context(context)
             self.context = nil
@@ -47,9 +51,13 @@ final class LlamaBridge: LlamaBridgeProtocol {
     }
 
     deinit {
-        try? unloadModelIfNeeded()
+        queue.sync {
+            unloadModelIfNeededLocked()
+        }
     }
 }
+
+extension LlamaBridge: @unchecked Sendable {}
 
 // MARK: - Bridged C API
 
